@@ -2,11 +2,12 @@
 import { ActionFunctionArgs, LoaderFunctionArgs, json } from "@remix-run/node";
 import {
   Form,
+  ShouldRevalidateFunctionArgs,
   useActionData,
   useLoaderData,
   useNavigation,
 } from "@remix-run/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPrompt } from "../utils/prodia";
 // export const meta: MetaFunction = () => {
 //   return [
@@ -16,34 +17,38 @@ import { createPrompt } from "../utils/prodia";
 // };
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const body = await request.formData();
-  const inputValue = String(body.get("prompt"));
-  return json(await createPrompt(inputValue));
+  return json(await createPrompt("puppies in a cloud, 4k"));
+  return json([]);
 };
 
 export async function action({ request }: ActionFunctionArgs) {
   const body = await request.formData();
   const name = String(body.get("prompt"));
-  if (name) {
-    return json(await createPrompt(name));
-  }
-
-  return json({ prompt: `Woops, something went wrong` });
+  const data = await createPrompt(name);
+  return json(data);
 }
 
 export default function Index() {
-  const [inputValue, setInputValue] = useState("puppies in a cloud, 4k");
-  const navigation = useNavigation();
-  console.log({ navigation });
-
-  const actionData = useActionData<typeof action>();
-  console.log({ actionData });
   const { status, imageUrl, prompt } = useLoaderData<typeof loader>();
+  const [serverImage, setServerImage] = useState(imageUrl);
+  const [serverPrompt, setServerPrompt] = useState(prompt);
+  const navigation = useNavigation();
+  const [inputValue, setInputValue] = useState(prompt);
+  const actionData = useActionData<typeof action>();
 
-  const handleChange = (e: any) => {
+  useEffect(() => {
+    if (actionData?.imageUrl || actionData?.prompt) {
+      setServerImage(actionData.imageUrl);
+      setServerPrompt(actionData.prompt);
+    }
+    console.log({ actionData, serverImage });
+  }, [actionData, serverImage]);
+
+  // console.log({ actionData });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
   };
-
   return (
     <div className="hero min-h-screen bg-base-200">
       <div className="hero-content text-center">
@@ -53,12 +58,13 @@ export default function Index() {
             Creations beyond your wildest dreams... Enter a prompt below.
           </p>
 
-          <Form enctype="multipart/form-data" method="post">
+          <Form encType="multipart/form-data" method="post">
             <label className="form-control w-full max-w-xs">
               <input
                 value={inputValue}
-                onChange={handleChange}
                 type="text"
+                placeholder={inputValue}
+                onChange={handleChange}
                 name="prompt"
                 className="input input-bordered w-full max-w-xs mb-3"
               />
@@ -73,17 +79,20 @@ export default function Index() {
             </label>
           </Form>
 
-          <div className="m-2 mt-20 p-2">
+          <div className="m-2 mt-20 p-4 border rounded-md">
             {navigation.state === "submitting" ||
             navigation.state === "loading" ? (
               <div className="">
-                <h1 className="mb-3 font-lg">Submitting Request</h1>
+                <h1 className="mb-3 font-lg italic">Submitting Request</h1>
                 <span className="loading loading-spinner loading-lg"></span>
               </div>
             ) : (
               <div>
-                <h3 className="font-bold text-xl">Your Image</h3>
-                <img src={imageUrl} alt={`prompt: ${prompt}`} />
+                <h3 className="font-bold text-4xl">Your Image</h3>
+                <p className="text-slate-400 text-lg my-4">
+                  Last Prompt: {serverPrompt}
+                </p>
+                <img src={serverImage} alt={`prompt: ${prompt}`} />
               </div>
             )}
           </div>

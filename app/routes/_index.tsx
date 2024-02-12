@@ -28,7 +28,7 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export default function Index() {
-  const { status, imageUrl, prompt } = useLoaderData<typeof loader>();
+  const { imageUrl, prompt } = useLoaderData<typeof loader>();
   const [serverImage, setServerImage] = useState(imageUrl);
   const [serverPrompt, setServerPrompt] = useState(prompt);
   const navigation = useNavigation();
